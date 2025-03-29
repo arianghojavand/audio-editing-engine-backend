@@ -8,10 +8,16 @@
 
 struct sound_seg {
     //TODO
+    int16_t* data; 
+    size_t length; 
+    size_t capacity; 
+   
+
 };
 
 // Load a WAV file into buffer
 void wav_load(const char* filename, int16_t* dest){
+    
     return;
 }
 
@@ -22,6 +28,7 @@ void wav_save(const char* fname, int16_t* src, size_t len){
 
 // Initialize a new sound_seg object
 struct sound_seg* tr_init() {
+    
     return NULL;
 }
 
