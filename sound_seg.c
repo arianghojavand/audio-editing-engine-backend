@@ -200,7 +200,7 @@ double cross_correlation(const int16_t* data1, const int16_t* data2, size_t len)
 
 // Returns a string containing <start>,<end> ad pairs in target
 char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
-    if (target->data == NULL || ad->data == NULL) return '\0';
+    if (target == NULL || ad == NULL) return strdup("");
 
     size_t target_len = target->length;
     size_t ad_len = ad->length;
@@ -208,7 +208,7 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
     double auto_corr = cross_correlation(ad->data, ad->data, ad_len);
 
 
-    size_t buffer_size = 128; //buffer size for the string
+    size_t buffer_size = 1024; //buffer size for the string
     size_t buffer_offset = 0; //offset for the buffer
     char* result = malloc(buffer_size * sizeof(char)); //result string
     if (result == NULL) return NULL;
@@ -219,6 +219,10 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
         double similarity = (cross_corr/auto_corr);
 
         if (similarity >= 0.95) {
+            printf("match found at %zu\n", i);
+            printf("similarity: %lf\n", similarity);
+            printf("cross_corr: %lf\n", cross_corr);
+            printf("auto_corr: %lf\n", auto_corr);
 
             int chars = snprintf(NULL, 0, "%zu,%zu\n", i, i + ad_len - 1); //THIS JUST GETS THE FUCKING LENGTH
 
@@ -236,7 +240,7 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
             buffer_offset += chars;
 
 
-            i += ad_len; //increment by ad_len - 1 to avoid overlap
+            i += ad_len > 1 ? ad_len - 1 : ad_len; //increment by ad_len - 1 to avoid overlap
 
         }
 
@@ -244,10 +248,13 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
 
     }
 
+    if (buffer_offset == 0) {
+        return strdup("");
+    }
+
     return result;
     
 }
-
 
 // Insert a portion of src_track into dest_track at position destpos
 void tr_insert(struct sound_seg* src_track,
@@ -255,6 +262,7 @@ void tr_insert(struct sound_seg* src_track,
             size_t destpos, size_t srcpos, size_t len) {
     return;
 }
+
 
 
 
