@@ -236,7 +236,7 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
             buffer_offset += chars;
 
 
-            i += ad_len - 1; //increment by ad_len - 1 to avoid overlap
+            i += ad_len; //increment by ad_len - 1 to avoid overlap
 
         }
 
@@ -248,13 +248,14 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
     
 }
 
-
+/*
 // Insert a portion of src_track into dest_track at position destpos
 void tr_insert(struct sound_seg* src_track,
             struct sound_seg* dest_track,
             size_t destpos, size_t srcpos, size_t len) {
     return;
 }
+*/
 
 
 
