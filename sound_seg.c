@@ -93,7 +93,24 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
 
 // Delete a range of elements from the track
 bool tr_delete_range(struct sound_seg* track, size_t pos, size_t len) {
+    if (track == NULL || pos + len > track->length) return false;
+
+    // Shift samples forward
+    memmove(track->data + pos, track->data + pos + len, 
+            (track->length - (pos + len)) * sizeof(int16_t));
     
+    track->length -= len;
+
+    // Optional: Shrink capacity
+    if (track->length < track->capacity / 2) {
+        size_t new_capacity = track->capacity / 2;
+        if (new_capacity < track->length) new_capacity = track->length; // Don’t undershoot
+        int16_t* new_data = realloc(track->data, new_capacity * sizeof(int16_t));
+        if (new_data == NULL) return false; // Keep old data if fail?
+        track->data = new_data;
+        track->capacity = new_capacity;
+    }
+
     return true;
 }
 
