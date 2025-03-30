@@ -15,17 +15,89 @@ struct sound_seg {
 };
 
 // Load a WAV file into buffer
-void wav_load(const char* filename, int16_t* dest){
-    
+void wav_load(const char* filename, int16_t* dest) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return;
+    }
 
+    // WAV header is 44 bytes for standard PCM
+    fseek(file, 44, SEEK_SET);
 
-    return;
+    // Read data until end of file
+    size_t index = 0;
+    while (fread(&dest[index], sizeof(int16_t), 1, file) == 1) {
+        index++;
+    }
+
+    fclose(file);
 }
+
 
 // Create/write a WAV file from buffer
-void wav_save(const char* fname, int16_t* src, size_t len){
-    return;
+void wav_save(const char* filename, const int16_t* src, size_t len) {
+    FILE* file = fopen(filename, "wb");
+    if (!file) {
+        perror("Failed to open file");
+        return;
+    }
+
+    /* 
+
+    WAV file format:
+    
+    Offset	Size	Field	Description
+        0	    4	    "RIFF"	File starts with "RIFF"
+        4	    4	    fileSize - 8	Total file size - 8
+        8	    4	    "WAVE"	File format ID
+        12  	4   	"fmt "	Format chunk ID
+        16  	4   	16	Chunk size (for PCM)
+        20  	2   	1	Audio format (1 = PCM)
+        22  	2   	1	Num channels (1 = mono)
+        24  	4   	8000	Sample rate (Hz)
+        28  	4   	16000	Byte rate = SampleRate × Ch × BPS/8
+        32  	2   	2	Block align = Ch × BPS/8
+        34  	2   	16	Bits per sample
+        36  	4   	"data"	Data chunk ID
+        40  	4   	dataSize	Num samples × Bytes per sample
+        44  	.   ..	Audio data	Raw 16-bit PCM samples
+        
+        */
+
+
+    uint32_t sample_rate = 8000;
+    uint16_t bits_per_sample = 16;
+    uint16_t num_channels = 1;
+
+    uint32_t byte_rate = sample_rate * num_channels * (bits_per_sample / 8);
+    uint16_t block_align = num_channels * (bits_per_sample / 8);
+    uint32_t data_chunk_size = len * sizeof(int16_t);
+    uint32_t riff_chunk_size = 36 + data_chunk_size;
+
+    // Write the header
+    fwrite("RIFF", 1, 4, file);
+    fwrite(&riff_chunk_size, 4, 1, file);
+    fwrite("WAVE", 1, 4, file);
+
+    fwrite("fmt ", 1, 4, file);
+    uint32_t fmt_chunk_size = 16;
+    uint16_t audio_format = 1;  // PCM
+    fwrite(&fmt_chunk_size, 4, 1, file);
+    fwrite(&audio_format, 2, 1, file);
+    fwrite(&num_channels, 2, 1, file);
+    fwrite(&sample_rate, 4, 1, file);
+    fwrite(&byte_rate, 4, 1, file);
+    fwrite(&block_align, 2, 1, file);
+    fwrite(&bits_per_sample, 2, 1, file);
+
+    fwrite("data", 1, 4, file);
+    fwrite(&data_chunk_size, 4, 1, file);
+    fwrite(src, sizeof(int16_t), len, file);
+
+    fclose(file);
 }
+
 
 // Initialize a new sound_seg object
 struct sound_seg* tr_init() {
