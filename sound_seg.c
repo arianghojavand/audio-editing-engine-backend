@@ -219,12 +219,12 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
         double similarity = (cross_corr/auto_corr);
 
         if (similarity >= 0.95) {
-            printf("match found at %zu\n", i);
-            printf("similarity: %lf\n", similarity);
-            printf("cross_corr: %lf\n", cross_corr);
-            printf("auto_corr: %lf\n", auto_corr);
+            // printf("match found at %zu\n", i);
+            // printf("similarity: %lf\n", similarity);
+            // printf("cross_corr: %lf\n", cross_corr);
+            // printf("auto_corr: %lf\n", auto_corr);
 
-            int chars = snprintf(NULL, 0, "%zu,%zu\n", i, i + ad_len - 1); //THIS JUST GETS THE FUCKING LENGTH
+            int chars = snprintf(NULL, 0, "%zu,%zu", i, i + ad_len - 1); //THIS JUST GETS THE FUCKING LENGTH
 
             if (buffer_offset + chars + 1 >= buffer_size) { // +1 for null terminator - lol
                 buffer_size *= 2;
@@ -236,7 +236,12 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
                 result = new_result;
             }
 
-            chars = snprintf(result + buffer_offset, buffer_size - buffer_offset, "%zu,%zu\n", i, i + ad_len - 1);
+            if (buffer_offset > 0) {
+                chars = snprintf(result + buffer_offset, buffer_size - buffer_offset, "\n%zu,%zu", i, i + ad_len - 1);
+            } else {
+                chars = snprintf(result + buffer_offset, buffer_size - buffer_offset, "%zu,%zu", i, i + ad_len - 1);
+            }
+            
             buffer_offset += chars;
 
 
