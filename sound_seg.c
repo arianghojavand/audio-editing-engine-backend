@@ -165,8 +165,8 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
 
 // Delete a range of elements from the track
 bool tr_delete_range(struct sound_seg* track, size_t pos, size_t len) {
-    if (track == NULL || pos + len > track->length) return false;
-
+    if (track == NULL || len > track->length || pos > track->length - len) return false;
+    
     // Shift samples forward
     memmove(track->data + pos, track->data + pos + len, 
             (track->length - (pos + len)) * sizeof(int16_t));
