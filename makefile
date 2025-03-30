@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -Wvla -fPIC -fsanitize=address -g
 
-OBJECTS = sound_seg.o test.o
+OBJECTS = sound_seg.o #test.o
 
 all: program
 
