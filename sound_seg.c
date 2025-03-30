@@ -186,9 +186,64 @@ bool tr_delete_range(struct sound_seg* track, size_t pos, size_t len) {
     return true;
 }
 
+
+
+double cross_correlation(const int16_t* data1, const int16_t* data2, size_t len) {
+    double sum = 0.0;
+    for (size_t n = 0; n < len; n++) {
+        sum += (double)data1[n] * (double)data2[n];
+    }
+    return sum;
+}
+
 // Returns a string containing <start>,<end> ad pairs in target
 char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
-    return NULL;
+    if (target == NULL || ad == NULL) return NULL;
+
+    size_t target_len = target->length;
+    size_t ad_len = ad->length;
+
+    double auto_corr = cross_correlation(ad->data, ad->data, ad_len);
+
+
+    size_t buffer_size = 128; //buffer size for the string
+    size_t buffer_offset = 0; //offset for the buffer
+    char* result = malloc(buffer_size * sizeof(char)); //result string
+    if (result == NULL) return NULL;
+
+
+    for (size_t i = 0; i <= target_len - ad_len; i++) { //increment by ad_len - 1 to avoid overlap
+        double cross_corr = cross_correlation(target->data + i, ad->data, ad_len);
+        double similarity = (cross_corr/auto_corr);
+
+        if (similarity >= 0.95) {
+
+            int chars = snprintf(NULL, 0, "%zu,%zu\n", i, i + ad_len - 1); //THIS JUST GETS THE FUCKING LENGTH
+
+            if (buffer_offset + chars + 1 >= buffer_size) { // +1 for null terminator - lol
+                buffer_size *= 2;
+                char* new_result = realloc(result, buffer_size * sizeof(char));
+                if (new_result == NULL) {
+                    free(result);
+                    return NULL;
+                }
+                result = new_result;
+            }
+
+            chars = snprintf(result + buffer_offset, buffer_size - buffer_offset, "%zu,%zu\n", i, i + ad_len - 1);
+            buffer_offset += chars;
+
+
+            i += ad_len - 1; //increment by ad_len - 1 to avoid overlap
+
+        }
+
+        
+
+    }
+
+    return result;
+    
 }
 
 // Insert a portion of src_track into dest_track at position destpos
