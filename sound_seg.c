@@ -166,7 +166,7 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
 // Delete a range of elements from the track
 bool tr_delete_range(struct sound_seg* track, size_t pos, size_t len) {
     if (track == NULL || len > track->length || pos > track->length - len) return false;
-    
+
     // Shift samples forward
     memmove(track->data + pos, track->data + pos + len, 
             (track->length - (pos + len)) * sizeof(int16_t));
@@ -246,9 +246,13 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
     
 }
 
+/*
 // Insert a portion of src_track into dest_track at position destpos
 void tr_insert(struct sound_seg* src_track,
             struct sound_seg* dest_track,
             size_t destpos, size_t srcpos, size_t len) {
     return;
 }
+
+*/
+
