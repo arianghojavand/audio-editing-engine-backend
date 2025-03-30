@@ -141,7 +141,7 @@ void tr_read(struct sound_seg* track, int16_t* dest, size_t pos, size_t len) {
 
 // Write len elements from src into position pos
 void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
-    if (track == NULL || src == NULL) return;
+    if (track == NULL || src == NULL || len == 0) return;
 
     size_t required = pos + len;
     if (required > track->capacity) {
@@ -155,7 +155,10 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
         track->capacity = new_capacity;
     }
 
-    memcpy(track->data + pos, src, len * sizeof(int16_t));
+    
+    if (len > 0) {
+        memcpy(track->data + pos, src, len * sizeof(int16_t));
+    }
 
     if (required > track->length) {
         track->length = required;
