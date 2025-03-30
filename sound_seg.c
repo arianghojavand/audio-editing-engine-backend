@@ -200,7 +200,7 @@ double cross_correlation(const int16_t* data1, const int16_t* data2, size_t len)
 
 // Returns a string containing <start>,<end> ad pairs in target
 char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
-    if (target == NULL || ad == NULL) return NULL;
+    if (target == NULL || ad == NULL) return "";
 
     size_t target_len = target->length;
     size_t ad_len = ad->length;
