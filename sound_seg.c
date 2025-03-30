@@ -135,17 +135,18 @@ size_t tr_length(struct sound_seg* seg) {
 
 // Read len elements from position pos into dest
 void tr_read(struct sound_seg* track, int16_t* dest, size_t pos, size_t len) {
-    if (track == NULL || dest == NULL || pos > track->length) return;
+    if (track == NULL || dest == NULL || pos + len > track->length) return;
     memcpy(dest, track->data + pos, len * sizeof(int16_t));
 }
 
 // Write len elements from src into position pos
 void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
-    if (track == NULL || src == NULL || len == 0) return;
+    if (track == NULL || src == NULL) return;
 
-    if (pos + len > track->capacity) {
-        size_t new_capacity = track->capacity * 2;
-        while (new_capacity < pos + len) {
+    size_t required = pos + len;
+    if (required > track->capacity) {
+        size_t new_capacity = track->capacity > 0 ? track->capacity : 1;
+        while (new_capacity < required) {
             new_capacity *= 2;
         }
         int16_t* new_data = realloc(track->data, new_capacity * sizeof(int16_t));
@@ -154,13 +155,11 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
         track->capacity = new_capacity;
     }
 
-    if (pos + len > track->length) {
-        track->length = pos + len;
-    }
-
     memcpy(track->data + pos, src, len * sizeof(int16_t));
 
-    return;
+    if (required > track->length) {
+        track->length = required;
+    }
 }
 
 // Delete a range of elements from the track
