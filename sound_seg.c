@@ -128,7 +128,7 @@ struct sound_seg* tr_init() {
 void tr_destroy(struct sound_seg* obj) {
     if (obj == NULL) return;
 
-    free(obj->data);
+    free(obj->track.data);
     free(obj);
 
     return;
@@ -137,13 +137,13 @@ void tr_destroy(struct sound_seg* obj) {
 // Return the length of the segment
 size_t tr_length(struct sound_seg* seg) {
     if (seg == NULL) return 0;
-    return seg->length;
+    return seg->track.length;
 }
 
 // Read len elements from position pos into dest
 void tr_read(struct sound_seg* track, int16_t* dest, size_t pos, size_t len) {
-    if (track == NULL || dest == NULL || pos + len > track->length) return;
-    memcpy(dest, track->data + pos, len * sizeof(int16_t));
+    if (track == NULL || dest == NULL || pos + len > track->track.length) return;
+    memcpy(dest, track->track.data + pos, len * sizeof(int16_t));
 }
 
 // Write len elements from src into position pos
@@ -151,45 +151,45 @@ void tr_write(struct sound_seg* track, int16_t* src, size_t pos, size_t len) {
     if (track == NULL || src == NULL || len == 0) return;
 
     size_t required = pos + len;
-    if (required > track->capacity) {
-        size_t new_capacity = track->capacity > 0 ? track->capacity : 1;
+    if (required > track->track.capacity) {
+        size_t new_capacity = track->track.capacity > 0 ? track->track.capacity : 1;
         while (new_capacity < required) {
             new_capacity *= 2;
         }
-        int16_t* new_data = realloc(track->data, new_capacity * sizeof(int16_t));
+        int16_t* new_data = realloc(track->track.data, new_capacity * sizeof(int16_t));
         if (new_data == NULL) return;
-        track->data = new_data;
-        track->capacity = new_capacity;
+        track->track.data = new_data;
+        track->track.capacity = new_capacity;
     }
 
     
     if (len > 0) {
-        memcpy(track->data + pos, src, len * sizeof(int16_t));
+        memcpy(track->track.data + pos, src, len * sizeof(int16_t));
     }
 
-    if (required > track->length) {
-        track->length = required;
+    if (required > track->track.length) {
+        track->track.length = required;
     }
 }
 
 // Delete a range of elements from the track
 bool tr_delete_range(struct sound_seg* track, size_t pos, size_t len) {
-    if (track == NULL || len > track->length || pos > track->length - len) return false;
+    if (track == NULL || len > track->track.length || pos > track->track.length - len) return false;
 
     // Shift samples forward
-    memmove(track->data + pos, track->data + pos + len, 
-            (track->length - (pos + len)) * sizeof(int16_t));
+    memmove(track->track.data + pos, track->track.data + pos + len, 
+            (track->track.length - (pos + len)) * sizeof(int16_t));
     
-    track->length -= len;
+    track->track.length -= len;
 
     // Optional: Shrink capacity
-    if (track->length < track->capacity / 2) {
-        size_t new_capacity = track->capacity / 2;
-        if (new_capacity < track->length) new_capacity = track->length; // Don’t undershoot
-        int16_t* new_data = realloc(track->data, new_capacity * sizeof(int16_t));
+    if (track->track.length < track->track.capacity / 2) {
+        size_t new_capacity = track->track.capacity / 2;
+        if (new_capacity < track->track.length) new_capacity = track->track.length; // Don’t undershoot
+        int16_t* new_data = realloc(track->track.data, new_capacity * sizeof(int16_t));
         if (new_data == NULL) return false; // Keep old data if fail?
-        track->data = new_data;
-        track->capacity = new_capacity;
+        track->track.data = new_data;
+        track->track.capacity = new_capacity;
     }
 
     return true;
@@ -209,10 +209,10 @@ double cross_correlation(const int16_t* data1, const int16_t* data2, size_t len)
 char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
     if (target == NULL || ad == NULL) return strdup("");
 
-    size_t target_len = target->length;
-    size_t ad_len = ad->length;
+    size_t target_len = target->track.length;
+    size_t ad_len = ad->track.length;
 
-    double auto_corr = cross_correlation(ad->data, ad->data, ad_len);
+    double auto_corr = cross_correlation(ad->track.data, ad->track.data, ad_len);
 
 
     size_t buffer_size = 1024; //buffer size for the string
@@ -222,7 +222,7 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
 
 
     for (size_t i = 0; i <= target_len - ad_len; i++) { //increment by ad_len - 1 to avoid overlap
-        double cross_corr = cross_correlation(target->data + i, ad->data, ad_len);
+        double cross_corr = cross_correlation(target->track.data + i, ad->track.data, ad_len);
         double similarity = (cross_corr/auto_corr);
 
         if (similarity >= 0.95) {
