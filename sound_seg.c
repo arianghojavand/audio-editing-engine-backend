@@ -6,11 +6,16 @@
 #include <stdio.h>
 
 
-struct sound_seg {
-    //TODO
+typedef struct {
     int16_t* data; 
     size_t length; 
-    size_t capacity; 
+    size_t capacity;
+} Track;
+
+struct sound_seg {
+    //TODO
+    Track track;
+    Track* track_ptr; // Pointer to the track structure
 
 };
 
@@ -101,20 +106,22 @@ void wav_save(const char* filename, const int16_t* src, size_t len) {
 
 // Initialize a new sound_seg object
 struct sound_seg* tr_init() {
-    struct sound_seg* track = calloc(1, sizeof(struct sound_seg));
-    if (track == NULL) return NULL;
+    struct sound_seg* segment = calloc(1, sizeof(struct sound_seg));
+    if (segment == NULL) return NULL;
 
-    track->length = 0;
-    track->capacity = 8; //small default size which != 0 so that we can reallocate multiplicatively if needed
+    segment->track.length = 0;
+    segment->track.capacity = 8; //small default size which != 0 so that we can reallocate multiplicatively if needed
 
-    track->data = calloc(track->capacity, sizeof(int16_t));
+    segment->track.data = calloc(segment->track.capacity, sizeof(int16_t));
 
-    if (track->data == NULL) {
-        free(track);
+    if (segment->track.data == NULL) {
+        free(segment);
         return NULL;
     }
 
-    return track;
+    segment->track_ptr = NULL;
+
+    return segment;
 }
 
 // Destroy a sound_seg object and free all allocated memory
@@ -265,6 +272,17 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
 void tr_insert(struct sound_seg* src_track,
             struct sound_seg* dest_track,
             size_t destpos, size_t srcpos, size_t len) {
+
+    if (src_track == NULL || dest_track == NULL || len == 0) return;
+    
+    
+
+
+
+
+
+
+
     return;
 }
 
