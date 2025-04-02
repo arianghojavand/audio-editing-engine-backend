@@ -247,6 +247,9 @@ void tr_read(struct sound_seg* track, int16_t* dest, size_t pos, size_t len) {
         return;
     }
 
+    size_t offset = 0;
+    flatten_segment(track, flat_buffer, &offset);
+
     memcpy(dest, flat_buffer + pos, len * sizeof(int16_t));
 
     free(flat_buffer);
