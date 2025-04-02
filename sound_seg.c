@@ -10,15 +10,18 @@ typedef struct {
     int16_t* data; 
     size_t length; 
     size_t capacity;
+
 } Track;
 
 struct sound_seg {
     
     Track track;
     
-    struct sound_seg** track_ptrs; 
+    struct sound_seg** track_ptrs[2]; 
     size_t num_track_ptrs; 
     size_t track_ptr_capacity; 
+
+
 
     struct sound_seg* parent;
     struct sound_seg** children;
@@ -129,18 +132,15 @@ struct sound_seg* tr_init() {
         return NULL;
     }
 
-    segment->track_ptrs = malloc(sizeof(struct sound_seg*) * 2);
-    if (segment->track_ptrs == NULL) {
-        free(segment);
-        return NULL;
-    }
-
+    // segment->track_ptrs[0] = NULL;
     segment->num_track_ptrs = 0;
-    segment->track_ptr_capacity = 2;
+    // segment->track_ptr_capacity = 2;
     segment->parent = NULL;
-
-
     segment->children = NULL;
+    segment->num_children = 0;
+    segment->num_children_capacity = 1;
+    
+
     // = malloc(sizeof(struct sound_seg*) * 1);
     // if (segment->children == NULL) {
     //     free(segment->track.data);
@@ -150,8 +150,6 @@ struct sound_seg* tr_init() {
     //     return NULL;
     // }
 
-    segment->num_children = 0;
-    segment->num_children_capacity = 1;
     
 
     return segment;
@@ -162,7 +160,7 @@ void tr_destroy(struct sound_seg* obj) {
     if (obj == NULL) return;
 
     free(obj->track.data);
-    free(obj->track_ptrs);
+    // free(obj->track_ptrs);
 
     for (size_t i = 0; i < obj->num_children; i++) {
         free(obj->children[i]);
@@ -316,91 +314,98 @@ like kanye we'll chop up the the beat and then stitch it back together
 
 */
 
-
-
-void split_track(struct sound_seg* source_track, struct sound_seg* right_track, size_t split_pos, size_t split_len) {
-    if (source_track == NULL || right_track == NULL || split_len == 0) return;
-
-    // Check if split_pos is valid
-    if (split_pos >= source_track->track.length) {
-        return; // Invalid position
-    }
-
-    // Calculate the length of the left segment
-    size_t left_len = split_pos;
-
-    // Create a new sound_seg for the right track
-    right_track->track.data = malloc(split_len * sizeof(int16_t));
-    if (right_track->track.data == NULL) {
-        return; // Memory allocation failed
-    }
-    right_track->track.length = split_len;
-    right_track->track.capacity = split_len;
-
-    //write into new track
-    memcpy(right_track->track.data, source_track->track.data + split_pos, split_len * sizeof(int16_t));
-
-    
-    tr_delete_range(source_track, split_pos, split_len); 
-    source_track->track.length = left_len;
-    source_track->track.capacity = left_len;
-
-    //in a memory efficient world...
-    // source_track->track.data = realloc(source_track->track.data, left_len * sizeof(int16_t));
-    // if (source_track->track.data == NULL) {
-    //     free(right_track->track.data);
-    //     return; 
-    // }
-    
-
-} 
-
-void copy_parent(struct sound_seg* dest, struct sound_seg* src) {
-    if (dest == NULL || src == NULL) return;
-
-    dest->parent = src->parent;
-}
-
 // void copy_children(struct sound_seg* dest, struct sound_seg* src) {
 //     if (dest == NULL || src == NULL) return;
-
+//
 //     dest->children = malloc(src->num_children * sizeof(struct sound_seg*));
 //     if (dest->children == NULL) return;
-
+//
 //     for (size_t i = 0; i < src->num_children; i++) {
 //         dest->children[i] = src->children[i];
 //     }
-
+//
 //     dest->num_children = src->num_children;
 // }
-
-void add_child(struct sound_seg* parent, struct sound_seg* child) {
-    if (parent == NULL || child == NULL) return;
-
-    if (parent->num_children == parent->num_children_capacity - 1) {
-        parent->num_children_capacity *= 2;
-        parent->children = realloc(parent->children, parent->num_children_capacity * sizeof(struct sound_seg*));
-        if (parent->children == NULL) return; // Memory allocation failed
-
-    }
-    parent->children[parent->num_children] = child;
-    parent->num_children++;
-
-    child->parent = parent;
-}
 
 void link_segments(struct sound_seg* tail_segment, struct sound_seg* head_segment) {
     if (tail_segment == NULL || head_segment == NULL) return;
 
-    if (tail_segment->num_track_ptrs == tail_segment->track_ptr_capacity - 1) {
-        tail_segment->track_ptrs = realloc(tail_segment -> track_ptrs, sizeof(Track*) * (tail_segment->track_ptr_capacity * 2)); 
-        if (tail_segment->track_ptrs == NULL) return; // Memory allocation failed
-    }
+    // if (tail_segment->num_track_ptrs <= tail_segment->track_ptr_capacity - 1) {
+    //     tail_segment->track_ptrs = realloc(tail_segment -> track_ptrs, sizeof(Track*) * (tail_segment->track_ptr_capacity * 2)); 
+    //     if (tail_segment->track_ptrs == NULL) return; // Memory allocation failed
+
+    //     tail_segment->track_ptr_capacity *= 2;
+    // }
     
-    tail_segment->track_ptrs[tail_segment->num_track_ptrs] = head_segment;
+    tail_segment->track_ptrs[tail_segment->num_track_ptrs] = &head_segment;
     tail_segment->num_track_ptrs++;
 
 }
+
+void split_track(struct sound_seg* source_track, struct sound_seg* right_track, size_t split_pos) {
+    if (source_track == NULL || right_track == NULL) return;
+
+    size_t left_track_len = split_pos;
+    size_t right_track_len = source_track->track.length - split_pos;
+
+    // we will simply resize source track for left half and create a new track for the right half
+
+    //right half...
+    right_track = tr_init();
+    tr_write(right_track, source_track->track.data, split_pos, right_track_len);
+
+    //update parameters and shit for new right half
+
+    right_track->children = source_track->children;
+    right_track->num_children = source_track->num_children;
+    right_track->num_children_capacity = source_track->num_children_capacity;
+    right_track->parent = source_track->parent;
+
+    //resize left half...
+    int16_t* temp = realloc(source_track->track.data, left_track_len * sizeof(int16_t));
+    if (temp == NULL) {
+        // Handle memory allocation failure
+        return;
+    }
+
+    source_track->track.data = temp;
+    source_track->track.length = left_track_len;
+    source_track->track.capacity = left_track_len;
+
+    //finally, make sure any pointers from the source track, are now passed on to the right half
+
+    memcpy(right_track->track_ptrs[0], source_track->track_ptrs[0], sizeof(struct sound_seg*));
+    memcpy(right_track->track_ptrs[1], source_track->track_ptrs[1], sizeof(struct sound_seg*));
+    source_track->num_track_ptrs = 0; //careful: it's not actually 0, but we don't need to worry about it for now
+
+} 
+
+
+
+// void copy_parent(struct sound_seg* dest, struct sound_seg* src) {
+//     if (dest == NULL || src == NULL) return;
+
+//     dest->parent = src->parent;
+// }
+
+
+
+// void add_child(struct sound_seg* parent, struct sound_seg* child) {
+//     if (parent == NULL || child == NULL) return;
+
+//     if (parent->num_children == parent->num_children_capacity - 1) {
+//         parent->num_children_capacity *= 2;
+//         parent->children = realloc(parent->children, parent->num_children_capacity * sizeof(struct sound_seg*));
+//         if (parent->children == NULL) return; // Memory allocation failed
+
+//     }
+//     parent->children[parent->num_children] = child;
+//     parent->num_children++;
+
+//     child->parent = parent;
+// }
+
+
 
 
 
@@ -411,55 +416,25 @@ void tr_insert(struct sound_seg* src_track,
 
     if (src_track == NULL || dest_track == NULL || len == 0) return;
 
+    //split the original source track three ways (like slicing a piece of cake twice to extract a slice)
 
-    //first establish the parent-child relationship
-    add_child(src_track, dest_track);    
+    struct sound_seg* clip_track = NULL;
+    split_track(src_track, clip_track, srcpos);
+    link_segments(src_track, clip_track);
 
-    struct sound_seg* clip = tr_init();
-    if (clip == NULL) return;
-    copy_parent(clip, src_track);
-    clip->children = src_track->children;
+    struct sound_seg* rest_of_src = NULL;
+    split_track(clip_track, rest_of_src, len);
+    link_segments(src_track, rest_of_src); //here the src track (now the left half of the original track) will have two pointers which point to the clip and the right half of the original track
 
+    //we have essentially created three segments out of original source track -> the before clip, the clip, and the after clip
 
-    //next, split
-    split_track(src_track, clip, srcpos, len);
+    //now we gotta make a surgical incision into the dest track (where our clip will be inserted)
 
-    //and stitch it back together
-    link_segments(src_track, clip);
+    struct sound_seg* rest_of_dest = NULL;
+    split_track(dest_track, rest_of_dest, destpos);
 
-    //if the clip does not go the full length of the src track, we need to split one more time to end the clip
-    if (src_track->track.length + clip->track.length < srcpos + len) {
-
-        //split
-        struct sound_seg* rest_of_src = tr_init();
-        copy_parent(rest_of_src, src_track);
-        rest_of_src -> children = src_track->children;
-        
-        
-
-        if (rest_of_src == NULL) return;
-        split_track(clip, rest_of_src, len, clip->track.length - len);
-
-        //and stitch
-        link_segments(clip, rest_of_src);
-
-    }
-
-    //now we have three parts: src_track, clip, and rest_of_src
-
-    //similarly split  dest_track into two parts: before destpos and after destpos
-    struct sound_seg* rest_of_dest = tr_init();
-    copy_parent(rest_of_dest, dest_track);
-    rest_of_dest->children = dest_track->children;
-
-
-    if (rest_of_dest == NULL) return;
-    split_track(dest_track, rest_of_dest, destpos, dest_track->track.length - destpos);
-
-    //and now stitch the clip into the dest_track
-
-    link_segments(dest_track, clip);
-    link_segments(clip, rest_of_dest);
+    link_segments(dest_track, clip_track);
+    link_segments(dest_track, rest_of_dest); 
 
     return;
 }
