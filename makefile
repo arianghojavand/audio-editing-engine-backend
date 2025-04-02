@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS =  -Wextra  -Wvla -g -fsanitize=address # -Werror -fno-omit-frame-pointer -Wall
+CFLAGS =  -Wextra  -Wvla -g -fsanitize=address -Werror -Wall # -fno-omit-frame-pointer
 
 OBJECTS = sound_seg.o #test.o
 

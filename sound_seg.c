@@ -15,7 +15,7 @@ typedef struct {
 struct sound_seg {
     //TODO
     Track track;
-    Track* track_ptr; // Pointer to the track structure
+    struct sound_seg* track_ptr; // Pointer to the track structure
 
 };
 
@@ -268,23 +268,95 @@ char* tr_identify(struct sound_seg* target, struct sound_seg* ad){
     
 }
 
+
+/* used as a helper function for insert
+the general idea here is to use a linked list type concept where we treat each soud_seg as 
+a node + a pointer to the next node
+
+like kanye we'll chop up the the beat and then stitch it back together
+
+*/
+
+void split_track(struct sound_seg* source_track, struct sound_seg* right_track, size_t split_pos, size_t split_len) {
+    if (source_track == NULL || right_track == NULL || split_len == 0) return;
+
+    // Check if split_pos is valid
+    if (split_pos >= source_track->track.length) {
+        return; // Invalid position
+    }
+
+    // Calculate the length of the left segment
+    size_t left_len = source_track->track.length - split_pos;
+
+    // Create a new sound_seg for the right track
+    right_track->track.data = malloc(split_len * sizeof(int16_t));
+    if (right_track->track.data == NULL) {
+        return; // Memory allocation failed
+    }
+
+    // Copy the data from the source track to the right track
+    memcpy(right_track->track.data, source_track->track.data + split_pos, split_len * sizeof(int16_t));
+
+    // Update the lengths of both tracks
+    source_track->track.length = left_len;
+    tr_delete_range(source_track, split_pos, split_len); // Remove the right segment from the source track
+    source_track->track.data = realloc(source_track->track.data, left_len * sizeof(int16_t));
+    if (source_track->track.data == NULL) {
+        free(right_track->track.data);
+        return; // Memory allocation failed
+    }
+    
+    source_track->track.capacity = left_len;
+    right_track->track.length = split_len;
+
+} 
+
 // Insert a portion of src_track into dest_track at position destpos
 void tr_insert(struct sound_seg* src_track,
             struct sound_seg* dest_track,
             size_t destpos, size_t srcpos, size_t len) {
 
     if (src_track == NULL || dest_track == NULL || len == 0) return;
+
+    //split the original source track into three parts and link them together
+
+    struct sound_seg* clip = tr_init();
+    if (clip == NULL) return;
     
-    
+
+    split_track(src_track, clip, srcpos, len);
+    src_track->track_ptr = clip;
 
 
+    if (src_track->track.length + clip->track.length < srcpos + len) {
+        struct sound_seg* rest_of_src = tr_init();
+        if (rest_of_src == NULL) return;
 
+        split_track(clip, rest_of_src, len, clip->track.length - len);
+        clip->track_ptr = rest_of_src;
 
+    }
 
+    //now we have three parts: src_track, clip, and rest_of_src
+    //similarly split  dest_track into two parts: before destpos and after destpos
+    struct sound_seg* rest_of_dest = tr_init();
+    if (rest_of_dest == NULL) return;
+    split_track(dest_track, rest_of_dest, destpos, dest_track->track.length - destpos);
 
+    //link dest_track to the new clip
+    dest_track->track_ptr = clip;
+    clip->track_ptr = rest_of_dest;
 
     return;
 }
+
+
+
+                    
+
+
+        
+    
 
 
 
