@@ -17,7 +17,7 @@ struct sound_seg {
     
     Track track;
     
-    struct sound_seg** track_ptrs[2]; 
+    struct sound_seg* track_ptrs[2]; 
     size_t num_track_ptrs; 
     size_t track_ptr_capacity; 
 
@@ -177,10 +177,79 @@ size_t tr_length(struct sound_seg* seg) {
     return seg->track.length;
 }
 
+
+/*
+so since i have the most confusing linked-sound-segment structure in whole wide world, 
+i need to extract the data from each connected segment and put it in a buffer which is much easier to handle,
+(mainly for read and write)
+
+*/
+
+size_t get_total_len_recursive(struct sound_seg* seg) {
+    if (seg == NULL) return 0;
+
+    size_t total_len = 0;
+
+    total_len += seg->track.length;
+
+    for (size_t i = 0; i < seg->num_track_ptrs; i++) {
+
+        struct sound_seg* next_struct = seg->track_ptrs[i];
+        size_t recursive_add_on = get_total_len_recursive(next_struct);
+
+        total_len += recursive_add_on;
+
+    }
+
+    return total_len;
+}
+
+//outside function would do this: int16_t* flat_buffer = malloc(get_total_len_recursive(seg) * sizeof(int16_t)); 
+
+void flatten_segment(struct sound_seg* seg, int16_t* flat_buffer, size_t* mem_offset) {
+    
+    
+    memcpy(flat_buffer + *mem_offset, seg->track.data, seg->track.length * sizeof(int16_t));
+    *mem_offset += seg->track.length;
+
+    for (size_t i = 0; i < seg->num_track_ptrs; i++) {
+
+        struct sound_seg* next_struct = seg->track_ptrs[i];
+        flatten_segment(next_struct, flat_buffer, mem_offset);
+
+    }
+
+    return;
+
+}
+
+
+
+//lol what the fuck am i trying to do here
+// void recursive_segment_traversal(struct sound_seg* head, void (*apply)(struct sound_seg* seg, int16_t* buff, size_t pos, size_t len)) { 
+//
+//     if (head->track_ptrs[0] == NULL) return;
+//
+//     apply(head, buff, pos, len);
+//
+//
+//
+//
+// }
+
 // Read len elements from position pos into dest
 void tr_read(struct sound_seg* track, int16_t* dest, size_t pos, size_t len) {
     if (track == NULL || dest == NULL || pos + len > track->track.length) return;
-    memcpy(dest, track->track.data + pos, len * sizeof(int16_t));
+
+    int16_t* flat_buffer = malloc(get_total_len_recursive(track) * sizeof(int16_t));
+    if (flat_buffer == NULL) {
+        perror("flat_buffer:");
+        return;
+    }
+
+    memcpy(dest, flat_buffer + pos, len * sizeof(int16_t));
+
+    free(flat_buffer);
 }
 
 // Write len elements from src into position pos
@@ -337,7 +406,7 @@ void link_segments(struct sound_seg* tail_segment, struct sound_seg* head_segmen
     //     tail_segment->track_ptr_capacity *= 2;
     // }
     
-    tail_segment->track_ptrs[tail_segment->num_track_ptrs] = &head_segment;
+    tail_segment->track_ptrs[tail_segment->num_track_ptrs] = head_segment;
     tail_segment->num_track_ptrs++;
 
 }
@@ -374,8 +443,8 @@ void split_track(struct sound_seg* source_track, struct sound_seg* right_track, 
 
     //finally, make sure any pointers from the source track, are now passed on to the right half
 
-    memcpy(right_track->track_ptrs[0], source_track->track_ptrs[0], sizeof(struct sound_seg*));
-    memcpy(right_track->track_ptrs[1], source_track->track_ptrs[1], sizeof(struct sound_seg*));
+    memcpy(&right_track->track_ptrs[0], source_track->track_ptrs[0], sizeof(struct sound_seg*));
+    memcpy(&right_track->track_ptrs[1], source_track->track_ptrs[1], sizeof(struct sound_seg*));
     source_track->num_track_ptrs = 0; //careful: it's not actually 0, but we don't need to worry about it for now
 
 } 
@@ -450,3 +519,5 @@ void tr_insert(struct sound_seg* src_track,
 
 
 
+// expected [-18 -18 -18 -18  -1   2 -18 -18  13 -18 -18 -18 -18 -18 -18 -18 -18   6 -13 -18 -18 -18  -1   2 -18 -18  13 -18  10 -18 -18 -18 -18 -18 -18 -18], 
+// actual   [-18 -18 -18 -18 -11 -18 -18 -18 -18 -18 -18 -18 -18 -18 -18 -18 -18   6 -13 -18 -18 -18  -1   2 -18 -18  13 -18  10 -18 -18 -18 -18 -18 -18 -18]
